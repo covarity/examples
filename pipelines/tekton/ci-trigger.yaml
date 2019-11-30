@@ -1,0 +1,81 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: opa-policy-pipeline-triggertemplate
+  namespace: opa-demo
+spec:
+  params:
+    - name: gitrevision
+      description: The git revision
+      default: master
+    - name: gitrepositoryurl
+      description: The git repository url
+    - name: namespace
+      description: The namespace to create the resources
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1alpha1
+      kind: PipelineResource
+      metadata:
+        name: source-repo-$(uid)
+        namespace: $(params.namespace)
+      spec:
+        type: git
+        params:
+        - name: revision
+          value: $(params.gitrevision)
+        - name: url
+          value: $(params.gitrepositoryurl)
+    - apiVersion: tekton.dev/v1alpha1
+      kind: PipelineResource
+      metadata:
+        name: event-to-sink-$(uid)
+        namespace: $(params.namespace)
+      spec:
+        type: cloudEvent
+        params:
+          - name: targetURI
+            value: http://event-display.getting-started.svc.cluster.local:8080
+    - apiVersion: tekton.dev/v1alpha1
+      kind: PipelineRun
+      metadata:
+        name: opa-policy-pipeline-run-$(uid)
+        namespace: $(params.namespace)
+      spec:
+        serviceAccount: tekton-triggers-admin
+        pipelineRef:
+          name: opa-policy-pipeline
+        resources:
+          - name: source-repo
+            resourceRef:
+              name: source-repo-$(uid)
+          - name: event-to-sink
+            resourceRef:
+              name: event-to-sink-$(uid)
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: opa-policy-pipeline-pipelinebinding
+  namespace: opa-demo 
+spec:
+  params:
+    - name: gitrevision
+      value: $(body.pull_request.head.sha)
+    - name: namespace
+      value: opa-demo
+    - name: gitrepositoryurl
+      value: "https://github.com/$(body.pull_request.head.repo.full_name)"
+---
+apiVersion: tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: opa-policy-pipeline-listener
+  namespace: opa-demo
+spec:
+  serviceAccountName: tekton-triggers-admin
+  triggers:
+  - interceptor:
+    binding:
+      name: opa-policy-pipeline-pipelinebinding
+    template:
+      name: opa-policy-pipeline-triggertemplate

@@ -1,0 +1,28 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: opa-policy-pipeline
+  namespace: opa-demo 
+spec:
+  gateways:
+  - knative-ingress-gateway.knative-serving.svc.cluster.local
+  - mesh
+  hosts:
+  - opa-policy-pipeline.tekton-pipelines.cicd.benebsworth.com
+  http:
+  - route:
+    - destination:
+        host: el-opa-policy-pipeline-listener.opa-demo.svc.cluster.local
+        port:
+          number: 8080
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: opa-policy-pipeline
+  namespace: opa-demo
+spec:
+  host: el-opa-policy-pipeline-listener.opa-demo.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE
