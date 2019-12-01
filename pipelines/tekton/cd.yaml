@@ -1,0 +1,50 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: opa-policy-deploy-pipeline
+  namespace: opa-demo
+spec:
+  resources:
+    - name: source-repo
+      type: git
+    - name: event-to-sink
+      type: cloudEvent
+  tasks:
+    - name: apply-resources
+      taskRef:
+        name: apply-resources
+      resources:
+        inputs:
+          - name: source-repo
+            resource: source-repo
+        outputs:
+          - name: event-to-sink
+            resource: event-to-sink
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: apply-resources
+  namespace: opa-demo
+spec:
+  inputs:
+    resources:
+      - name: source-repo
+        type: git
+  outputs:
+    resources:
+    - name: event-to-sink
+      type: cloudEvent
+  steps:
+    - name: helm-template
+      image: castlemilk/helm
+      command: ['/bin/bash']
+      args:
+        - '-c'
+        - 'echo $(inputs.resources.source-repo.revision)'
+    - name: kubectl-apply
+      image: castlemilk/kubectl
+      command: ['/bin/bash']
+      args:
+        - '-c'
+        - 'echo $(inputs.resources.source-repo.revision)'
