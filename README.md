@@ -15,7 +15,6 @@ The following technologies are used:
 - **Kustomize** to generate configmaps of policies
 - **Anchorctl** to perform integration testing of the policies
 
-<!-- TODO: Link back to the back after it is recorded -->
 More information about the demo can be found [here](./examples/test-admission-controller/README.md)
 
 ## Pipelines
