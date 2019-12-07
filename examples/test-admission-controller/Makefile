@@ -23,7 +23,7 @@ generate.policies: $(POLICIES)
 	@rm -rf ${KUBE_DIR}/policies;
 	@mkdir -p ${KUBE_DIR}/policies;
 	@for file in $^ ; do \
-		jinja2 /container/$${file} /container/values/${CLUSTER}.yaml --outfile /container/${KUBE_DIR}/policies/$$(basename $$file .j2).rego; \
+		jinja2 $${file} values/${CLUSTER}.yaml --outfile ${KUBE_DIR}/policies/$$(basename $$file .j2).rego; \
 	done
 
 ## Test generated OPA policies eg. make test.unit CLUSTER=ci
