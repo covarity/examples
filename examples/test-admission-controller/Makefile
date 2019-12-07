@@ -13,11 +13,17 @@ MANIFEST_DIR=${KUBE_DIR}/manifests/${POLICY_VERSION}
 POLICIES := $(wildcard policies/*/*.j2)
 
 ## Generate OPA policies into resources/${CLUSTER}/policies eg. make generate.policies CLUSTER=ci
-generate.policies: $(POLICIES)
+docker.generate.policies: $(POLICIES)
 	@rm -rf ${KUBE_DIR}/policies;
 	@mkdir -p ${KUBE_DIR}/policies;
 	@for file in $^ ; do \
 		docker run -v $(shell pwd):/container -it --rm castlemilk/jinja2 /container/$${file} /container/values/${CLUSTER}.yaml --outfile /container/${KUBE_DIR}/policies/$$(basename $$file .j2).rego; \
+	done
+generate.policies: $(POLICIES)
+	@rm -rf ${KUBE_DIR}/policies;
+	@mkdir -p ${KUBE_DIR}/policies;
+	@for file in $^ ; do \
+		jinja2 $${file} values/${CLUSTER}.yaml --outfile ${KUBE_DIR}/policies/$$(basename $$file .j2).rego; \
 	done
 
 ## Test generated OPA policies eg. make test.unit CLUSTER=ci
