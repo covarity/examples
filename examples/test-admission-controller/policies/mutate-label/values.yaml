@@ -1,0 +1,8 @@
+mutate_label:
+  resources:
+  - deployments
+  - replicasets
+  namespaces:
+  - namespace: something
+    label_key: something.anz/function
+    label_value: labels

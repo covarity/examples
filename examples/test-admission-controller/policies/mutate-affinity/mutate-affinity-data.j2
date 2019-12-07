@@ -1,0 +1,156 @@
+package library.kubernetes.admission.mutate.affinty.test
+
+{% for affinity in mutate_affinity.affinities -%}
+
+#-----------------------------------------------------------
+# Sample patch values to test against
+#-----------------------------------------------------------
+
+patchCode_noAffinity_{{ affinity.value | replace("-", "_")}} = {
+        "op": "add",
+        "path": "/spec/template/spec/affinity",
+        "value": {
+            "nodeAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": {
+                    "nodeSelectorTerms": [{
+                        "matchExpressions": [{
+                            "key": "{{mutate_affinity.key}}",
+                            "operator": "In",
+                            "values": ["{{ affinity.value }}"]
+                        }]
+                    }]
+                }
+            }
+        }
+    }
+
+patchCode_nodeAffinity_{{ affinity.value | replace("-", "_")}} = {
+	"op": "add",
+	"path": "/spec/template/spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution",
+	"value": {
+        "nodeSelectorTerms": [
+        {
+            "matchExpressions": [
+            {
+                "key": "{{mutate_affinity.key}}",
+                "operator": "In",
+                "values": ["{{ affinity.value }}"]
+            }
+            ]
+        }
+        ]
+    }
+}
+
+patchCode_matchExpression_{{ affinity.value | replace("-", "_")}} = {
+	"op": "add",
+	"path": "/spec/template/spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/0/matchExpressions",
+	"value": [{
+		"key": "{{mutate_affinity.key}}",
+		"operator": "In",
+		"values": ["{{ affinity.value }}"]
+	}]
+}
+
+{% for namespace in affinity.namespaces -%}
+
+#-----------------------------------------------------------
+# Sample AdmissionReview to test against
+#-----------------------------------------------------------
+
+no_matchExpression_{{namespace | replace("-","_")}} = {
+	"kind": "AdmissionReview",
+	"request": {
+		"kind": {
+			"kind": "Deployment",
+		},
+		"resource": {
+			"resource": "deployments",
+		},
+		"namespace": "{{namespace}}",
+		"operation": "CREATE",
+		"object": {
+			"metadata": {
+				"name": "deployment-demo-bad-no-version",
+				"namespace": "{{namespace}}",
+			},
+			"spec": {
+				"template": {
+					"spec": {
+						"affinity": {
+							"nodeAffinity": {
+								"requiredDuringSchedulingIgnoredDuringExecution": {
+									"nodeSelectorTerms" : [{
+										"matchExpressions":  [{
+											"key": "example-key",
+											"operator": "In",
+											"values": ["example-value"]
+										}]
+									}]
+								}
+							}
+						}
+					},
+				},
+			},
+		},
+	},
+}
+
+no_nodeAffinity_{{namespace | replace("-","_")}} = {
+	"kind": "AdmissionReview",
+	"request": {
+		"kind": {
+			"kind": "Deployment",
+		},
+		"resource": {
+			"resource": "deployments",
+		},
+		"namespace": "{{namespace}}",
+		"operation": "CREATE",
+		"object": {
+			"metadata": {
+				"name": "deployment-demo-bad-no-version",
+				"namespace": "{{namespace}}",
+			},
+			"spec": {
+				"template": {
+					"spec": {
+						"affinity": {
+							"nodeAffinity": {
+							}
+						}
+					},
+				},
+			},
+		},
+	},
+}
+
+no_affinity_{{namespace | replace("-","_")}} = {
+	"kind": "AdmissionReview",
+	"request": {
+		"kind": {
+			"kind": "Deployment",
+		},
+		"resource": {
+			"resource": "deployments",
+		},
+		"namespace": "{{namespace}}",
+		"operation": "CREATE",
+		"object": {
+			"metadata": {
+				"name": "deployment-demo-bad-no-version",
+				"namespace": "{{namespace}}",
+			},
+			"spec": {
+				"template": {
+					"spec": {}
+				},
+			},
+		},
+	},
+}
+
+{% endfor -%}
+{% endfor -%}

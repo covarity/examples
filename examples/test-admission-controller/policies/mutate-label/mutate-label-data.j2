@@ -1,0 +1,44 @@
+package library.kubernetes.admission.mutate.label.test
+
+{% for label in mutate_label -%}
+
+#-----------------------------------------------------------
+# Sample mutate label patch for each namespace
+#-----------------------------------------------------------
+
+patch_code_for_{{ label.namespace | replace("-", "_") }} = {
+        "op": "add",
+        "path": "/metadata/labels/{{label.label_key}}",
+        "value": "{{label.label_value}}"
+}
+
+#-----------------------------------------------------------
+# Sample AdmissionReview to test against
+#-----------------------------------------------------------
+
+deploy_to_{{ label.namespace | replace("-","_") }} = {
+	"kind": "AdmissionReview",
+	"request": {
+		"kind": {
+			"kind": "Deployment",
+		},
+		"resource": {
+			"resource": "deployments",
+		},
+		"namespace": "{{ label.namespace }}",
+		"operation": "CREATE",
+		"object": {
+			"metadata": {
+				"name": "deployment-without-label",
+				"namespace": "{{ label.namespace }}",
+			},
+			"spec": {
+				"template": {
+					"spec": {}
+				},
+			},
+		},
+	},
+}
+
+{% endfor -%}

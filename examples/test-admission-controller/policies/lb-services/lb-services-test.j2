@@ -1,0 +1,76 @@
+package system
+
+#-----------------------------------------------------------
+# Test: All denied resource should be rejected
+#-----------------------------------------------------------
+
+test_allow_nodeportService {
+  nodeport_object := {"request": {
+      "resource": {"resource": "services"},
+      "object": {
+          "spec": {
+              "type": "NodePort"
+          }
+      }
+  }}
+  res := main with input as nodeport_object
+  res.response.allowed = true
+}
+
+test_deny_externalLoadbalancer {
+  external_loadbalaner_object := {"request": {
+      "resource": {"resource": "services"},
+      "operation": "CREATE",
+      "object": {
+          "spec": {
+              "type": "LoadBalancer"
+          }
+      }
+  }}
+  res := main with input as external_loadbalaner_object
+  res.response.allowed = false
+}
+
+test_deny_internalLoadbalancerwrongNamespace {
+  internal_loadbalaner_wrong_namespace_object := {"request": {
+      "resource": {"resource": "services"},
+      "operation": "CREATE",
+      "namespace": "NotARealNamespace",
+      "object": {
+          "metadata": {
+              "annotations": {
+                  "cloud.google.com/load-balancer-type": "Internal"
+              }
+          },
+          "spec": {
+              "type": "LoadBalancer"
+          }
+      }
+  }}
+  res := main with input as internal_loadbalaner_wrong_namespace_object
+  res.response.allowed = false
+}
+
+{% for namespace in lb_services.namespaces -%}
+
+test_allow_{{ namespace | replace("-", "_")}} {
+  internal_loadbalancer_{{ namespace | replace("-", "_")}} := {"request": {
+      "resource": {"resource": "services"},
+      "operation": "CREATE",
+      "namespace": "{{ namespace }}",
+      "object": {
+          "metadata": {
+              "annotations": {
+                  "cloud.google.com/load-balancer-type": "Internal"
+              }
+          },
+          "spec": {
+              "type": "LoadBalancer"
+          }
+      }
+  }}
+  res := main with input as internal_loadbalancer_{{ namespace | replace("-", "_")}}
+  res.response.allowed = true
+}
+
+{% endfor -%}

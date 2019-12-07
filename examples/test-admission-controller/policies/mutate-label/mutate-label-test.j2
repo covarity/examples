@@ -1,0 +1,19 @@
+package system
+
+import data.library.kubernetes.admission.mutate.label.test as mutatelabel
+
+{% for label in mutate_label -%}
+
+#-----------------------------------------------------------
+# Test: {{ label.namespace }} patch
+#-----------------------------------------------------------
+
+test_{{label.namespace | replace("-","_")}}_label_patch {
+	res := main with input as mutatelabel.deploy_to_{{ label.namespace | replace("-","_") }}
+	res.response.allowed = true
+	isPatchResponse(res)
+	patches = json.unmarshal(base64.decode(res.response.patch))
+	hasPatch(patches, mutatelabel.patch_code_for_{{ label.namespace | replace("-", "_") }})
+}
+
+{% endfor -%}

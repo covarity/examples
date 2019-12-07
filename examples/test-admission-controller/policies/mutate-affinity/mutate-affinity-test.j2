@@ -1,0 +1,53 @@
+package system
+
+import data.library.kubernetes.admission.mutate.affinty.test as mutatedata
+
+{% for affinity in mutate_affinity.affinities -%}
+
+{% for namespace in affinity.namespaces -%}
+
+#-----------------------------------------------------------
+# Test: {{affinity.value}} patch
+#-----------------------------------------------------------
+
+test_makeAffinityPatch_noAffinity_{{namespace | replace("-","_")}} {
+	makeAffinityPatch("{{mutate_affinity.key}}", "{{affinity.value}}", mutatedata.no_affinity_{{namespace | replace("-","_")}}.request.object.spec.template.spec, resp) with input as mutatedata.no_affinity_{{namespace | replace("-","_")}}
+	resp == mutatedata.patchCode_noAffinity_{{ affinity.value | replace("-", "_")}}
+}
+
+test_affinityPatch_noAffinity_{{namespace | replace("-","_")}} {
+	res := main with input as mutatedata.no_affinity_{{namespace | replace("-","_")}}
+	res.response.allowed = true
+	isPatchResponse(res)
+	patches = json.unmarshal(base64.decode(res.response.patch))
+	hasPatch(patches, mutatedata.patchCode_noAffinity_{{ affinity.value | replace("-", "_")}})
+}
+
+test_makeAffinityPatch_nodeAffinity_{{namespace | replace("-","_")}} {
+	makeAffinityPatch("{{mutate_affinity.key}}", "{{affinity.value}}", mutatedata.no_nodeAffinity_{{namespace | replace("-","_")}}.request.object.spec.template.spec, resp) with input as mutatedata.no_nodeAffinity_{{namespace | replace("-","_")}}
+	resp == mutatedata.patchCode_nodeAffinity_{{ affinity.value | replace("-", "_")}}
+}
+
+test_affinityPatch_nodeAffinity_{{namespace | replace("-","_")}} {
+	res := main with input as mutatedata.no_nodeAffinity_{{namespace | replace("-","_")}}
+	res.response.allowed = true
+	isPatchResponse(res)
+	patches = json.unmarshal(base64.decode(res.response.patch))
+	hasPatch(patches, mutatedata.patchCode_nodeAffinity_{{ affinity.value | replace("-", "_")}})
+}
+
+test_makeAffinityPatch_matchExpression_{{namespace | replace("-","_")}} {
+	makeAffinityPatch("{{mutate_affinity.key}}", "{{affinity.value}}", mutatedata.no_matchExpression_{{namespace | replace("-","_")}}.request.object.spec.template.spec, resp) with input as mutatedata.no_matchExpression_{{namespace | replace("-","_")}}
+	resp == mutatedata.patchCode_matchExpression_{{ affinity.value | replace("-", "_")}}
+}
+
+test_affinityPatch_matchExpression_{{namespace | replace("-","_")}} {
+	res := main with input as mutatedata.no_matchExpression_{{namespace | replace("-","_")}}
+	res.response.allowed = true
+	isPatchResponse(res)
+	patches = json.unmarshal(base64.decode(res.response.patch))
+	hasPatch(patches, mutatedata.patchCode_matchExpression_{{ affinity.value | replace("-", "_")}})
+}
+
+{% endfor -%}
+{% endfor -%}
