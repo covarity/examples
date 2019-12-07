@@ -68,7 +68,7 @@ spec:
           - |
             ls -la source-repo/
             cd source-repo/examples/test-admission-controller
-            make generate.policies
+            make generate.policies CLUSTER=ci
 ---
 apiVersion: tekton.dev/v1alpha1
 kind: Task
@@ -115,14 +115,6 @@ spec:
       volumeMounts:
         - mountPath: /var/run/
           name: dind-socket
-    - name: generate-policy
-      image: castlemilk/jinja2
-      command: ['/bin/bash']
-      args:
-        - '-c'
-        - |
-          cd examples/test-admission-controller
-          make generate.policies
     - name: anchorctl-integration-test
       image: castlemilk/kind
       command: ['kubectl']
