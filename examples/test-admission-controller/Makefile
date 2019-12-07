@@ -1,0 +1,79 @@
+# COLORS
+GREEN  := $(shell tput -Txterm setaf 2)
+YELLOW := $(shell tput -Txterm setaf 3)
+WHITE  := $(shell tput -Txterm setaf 7)
+RESET  := $(shell tput -Txterm sgr0)
+TARGET_MAX_CHAR_NUM=20
+
+ROLLBACK_VERSION=0.1.0
+POLICY_VERSION=0.1.0
+KUBE_DIR=resources/${CLUSTER}
+PREREQS=prerequisites
+MANIFEST_DIR=${KUBE_DIR}/manifests/${POLICY_VERSION}
+POLICIES := $(wildcard policies/*/*.j2)
+
+## Generate OPA policies into resources/${CLUSTER}/policies eg. make generate.policies CLUSTER=ci
+generate.policies: $(POLICIES)
+	@rm -rf ${KUBE_DIR}/policies;
+	@mkdir -p ${KUBE_DIR}/policies;
+	@for file in $^ ; do \
+		jinja2 $${file} values/${CLUSTER}.yaml --outfile ${KUBE_DIR}/policies/$$(basename $$file .j2).rego; \
+	done
+
+## Test generated OPA policies eg. make test.unit CLUSTER=ci
+test.unit: generate.policies
+	@cd resources/${CLUSTER}/policies; opa test . -v -l --explain full;
+
+## Generate kube configmaps from OPA policies that end with -main.rego eg. make generate.manifests CLUSTER=ci
+generate.manifests: test.unit
+	@rm -rf ${KUBE_DIR}/kustomization.yaml; touch ${KUBE_DIR}/kustomization.yaml;
+	@mkdir -p ${MANIFEST_DIR}
+	@cd ${KUBE_DIR}; for file in $(shell find ${KUBE_DIR}/policies -type f -name '*-main.rego'); do \
+	 	kustomize edit add configmap $$(basename $$file .rego) --from-file ./policies/$$(basename $$file); \
+	done;
+	@cd ${KUBE_DIR}; kustomize edit set namespace opa; kustomize edit add label openpolicyagent.org/policy:rego
+	@echo "generatorOptions:\n  disableNameSuffixHash: true" >> ${KUBE_DIR}/kustomization.yaml
+	@cd ${KUBE_DIR}; kustomize build . > ./manifests/${POLICY_VERSION}/output.yaml;
+
+## Deploy OPA + kube-mgmt into the cluster eg. make deploy.prereqs CLUSTER=ci
+deploy.prereqs:
+	@kubectl apply -f ${PREREQS}
+
+## Deploy the OPA policy configmaps in the cluster eg. make deploy CLUSTER=ci
+deploy: generate.manifests deploy.prereqs
+	@kubectl apply -f ${MANIFEST_DIR}/output.yaml
+	@sleep 3
+	$(MAKE) status
+
+## Test coverage of OPA policies eg. make test.coverage CLUSTER=ci
+test.coverage: generate.policies
+	@cd resources/${CLUSTER}/policies; opa test . -c;
+
+## Integration test OPA policies with anchorctl eg. make test.integration CLUSTER=ci
+test.integration: test.unit
+	anchorctl -f ./test/anchor_test_${CLUSTER}.yaml -k kubetest
+
+## Delete auto-generated files under resouces/${CLUSTER} eg. make clean CLUSTER=ci
+clean:
+	rm -rf resources/${CLUSTER}
+
+## Status of OPA configmaps. The status is autopopulated by OPA after compilation of the policy eg. make status CLUSTER=ci
+status:
+	@kubectl get cm -n opa -o jsonpath='{range .items[*]}{.metadata.name}: {.metadata.annotations.openpolicyagent\.org/policy-status}{"\n"}{end}'
+
+## List the Makefile Entries and a short description
+help:
+	@echo ''
+	@echo 'Usage:'
+	@echo '  $(YELLOW)make$(RESET) $(GREEN)<target>$(RESET)'
+	@echo ''
+	@echo 'Targets:'
+	@awk '/^[a-zA-Z\-\.\_0-9]+:/ { \
+		helpMessage = match(lastLine, /^## (.*)/); \
+		if (helpMessage) { \
+			helpCommand = substr($$1, 0, index($$1, ":")-1); \
+			helpMessage = substr(lastLine, RSTART + 3, RLENGTH); \
+			printf "  ${YELLOW}%-$(TARGET_MAX_CHAR_NUM)s${RESET} ${GREEN}%s${RESET}\n", helpCommand, helpMessage; \
+		} \
+	} \
+	{ lastLine = $$0 }' $(MAKEFILE_LIST)

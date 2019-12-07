@@ -1,0 +1,16 @@
+mutate_affinity:
+  key: anchor.trussio/function
+  affinities:
+  - value: operation-tools
+    namespaces:
+    - istio-system
+    - ops
+
+lb_services:
+  namespaces:
+  - ingress
+
+mutate_label:
+- namespace: something
+  label_key: something.is
+  label_value: labels

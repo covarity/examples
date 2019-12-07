@@ -1,0 +1,22 @@
+package system
+
+############################################################
+# PATCH rules
+#
+# Note: All patch rules should start with `isValidRequest` and `isCreateOrUpdate`
+############################################################
+
+mutateLabelResourceList = ["deployments", "jobs", "cronjobs", "replicasets"]
+
+{% for label in mutate_label -%}
+
+patch [patchCode] {
+    isValidRequest
+	isCreateOrUpdate
+	input.request.resource.resource = mutateLabelResourceList[_]
+    input.request.namespace = "{{ label.namespace }}"
+    patchCode = { "op": "add", "path": "/metadata/labels/{{label.label_key}}", "value": "{{label.label_value}}" }
+
+}
+
+{% endfor -%}

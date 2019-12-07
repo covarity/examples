@@ -1,0 +1,12 @@
+mutate_affinity:
+  key: affinity-key
+  resources:
+  - deployments
+  - jobs
+  - cronjobs
+  - replicasets
+  affinities:
+  - value: affinity-value
+    namespaces:
+    - ops
+    - istio
