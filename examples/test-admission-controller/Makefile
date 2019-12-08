@@ -41,6 +41,7 @@ generate.manifests:
 	cd ${KUBE_DIR}; kustomize edit set namespace opa; kustomize edit add label openpolicyagent.org/policy:rego
 	@echo -e 'generatorOptions:\n  disableNameSuffixHash: true' >> ${KUBE_DIR}/kustomization.yaml
 	@cd ${KUBE_DIR}; kustomize build . > ./manifests/${POLICY_VERSION}/output.yaml;
+	@cd ${KUBE_DIR}; kustomize build . > ./manifests/latest/output.yaml;
 
 ## Deploy OPA + kube-mgmt into the cluster eg. make deploy.prereqs CLUSTER=ci
 deploy.prereqs:

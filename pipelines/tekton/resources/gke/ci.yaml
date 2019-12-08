@@ -9,10 +9,17 @@ spec:
       type: git
     - name: event-to-sink
       type: cloudEvent
+  params:
+    - name: branch
+      type: string
+      description: branch name corresponding to pipeline trigger
   tasks:
     - name: opa-policy-generate
       taskRef:
         name: opa-policy-generate
+      params:
+        - name: branch
+          value: $(params.branch)
       resources:
         inputs:
           - name: workspace
@@ -58,6 +65,10 @@ metadata:
   namespace: opa-demo
 spec:
   inputs:
+    params:
+    - name: branch
+      type: string
+      default: master
     resources:
       - name: workspace
         type: git
@@ -74,6 +85,8 @@ spec:
       args:
         - '-c'
         - |
+          echo "branch_name=$(inputs.params.branch)"
+          echo "revision=$(inputs.resources.workspace.revision)"
           cd workspace/examples/test-admission-controller 
           make generate.policies CLUSTER=ci KUBE_DIR=/workspace/output/workspace
     - name: generate-manifests
@@ -84,7 +97,7 @@ spec:
         - |
           cd workspace/examples/test-admission-controller 
           make generate.manifests CLUSTER=ci KUBE_DIR=/workspace/output/workspace
-          tree /workspace/output/workspace 
+          tree /workspace/output/workspace
 ---
 apiVersion: tekton.dev/v1alpha1
 kind: Task
@@ -102,7 +115,7 @@ spec:
     - name: event-to-sink
       type: cloudEvent
   steps:
-    - name: test
+    - name: opa-unit-test
       image: castlemilk/opa
       args:
         - test
@@ -130,14 +143,14 @@ spec:
     - name: event-to-sink
       type: cloudEvent
   steps:
-    - name: test
-      image: castlemilk/kind
-      command: ['/bin/bash']
-      args:
-        - '-c'
-        - |
-          ls -la /workspace/source-repo
-          ls -la /workspace/generated
+    # - name: test
+    #   image: castlemilk/kind
+    #   command: ['/bin/bash']
+    #   args:
+    #     - '-c'
+    #     - |
+    #       ls -la /workspace/source-repo
+    #       ls -la /workspace/generated
     - name: start-cluster
       image: castlemilk/kind
       command: ['/bin/bash']
@@ -169,13 +182,13 @@ spec:
         - 'apply'
         - '-f'
         - '/workspace/generated/manifests/0.1.0'
-    - name: validate-lb
-      image: castlemilk/kind
-      command: ['/bin/bash']
-      args:
-        - '-c'
-        - |
-          kubectl create service loadbalancer test --tcp=8080 -n default
+    # - name: validate-lb
+    #   image: castlemilk/kind
+    #   command: ['/bin/bash']
+    #   args:
+    #     - '-c'
+    #     - |
+    #       kubectl create service loadbalancer test --tcp=8080 -n default
     - name: anchorctl-integration-test
       image: castlemilk/kind
       command: ['kubectl']

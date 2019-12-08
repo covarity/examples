@@ -1,2 +1,10 @@
 examples/test-admission-controller/resources/*/policies
 examples/test-admission-controller/resources/*/kustomization.yaml
+*-key.pem
+.vscode
+.idea
+istio-1.*
+app/src/backend/backend
+github-secret.yaml
+*.credentials
+.DS_Store
