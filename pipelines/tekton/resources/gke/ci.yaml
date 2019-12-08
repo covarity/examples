@@ -7,12 +7,17 @@ spec:
   resources:
     - name: source-repo
       type: git
+    # - name: pull-request
+    #   type: pullRequest
     - name: event-to-sink
       type: cloudEvent
   params:
     - name: branch
       type: string
       description: branch name corresponding to pipeline trigger
+    - name: statuses_url
+      type: string
+      description: github url for updating status for PR sha
   tasks:
     - name: opa-policy-generate
       taskRef:
@@ -20,15 +25,21 @@ spec:
       params:
         - name: branch
           value: $(params.branch)
+        - name: statuses_url
+          value: $(params.statuses_url)
       resources:
         inputs:
           - name: workspace
             resource: source-repo
+          # - name: pull-request
+          #   resource: pull-request
         outputs:
           - name: event-to-sink
             resource: event-to-sink
           - name: workspace
             resource: source-repo
+          # - name: pull-request
+          #   resource: pull-request
     - name: opa-policy-unit-tests
       runAfter:
       - opa-policy-generate
@@ -69,15 +80,21 @@ spec:
     - name: branch
       type: string
       default: master
+    - name: statuses_url
+      type: string
     resources:
       - name: workspace
         type: git
+      # - name: pull-request
+      #   type: pullRequest
   outputs:
     resources:
     - name: event-to-sink
       type: cloudEvent
     - name: workspace
       type: git
+    # - name: pull-request
+    #   type: pullRequest
   steps:
     - name: generate-policy
       image: castlemilk/jinja2
@@ -98,6 +115,32 @@ spec:
           cd workspace/examples/test-admission-controller 
           make generate.manifests CLUSTER=ci KUBE_DIR=/workspace/output/workspace
           tree /workspace/output/workspace
+    - name: update-status-success
+      image: castlemilk/curl
+      env:
+        - name: GITHUB_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-secrets 
+              key: token
+      command:
+      - /bin/bash
+      args:
+      - '-c'
+      - |
+        echo '{"state":"pending","context":"generated-config","description":"generated-configuration","target_url":""}' > policy-generated.json
+        curl -vvvv $(inputs.params.statuses_url)?access_token=${GITHUB_ACCESS_TOKEN} \
+          -d @policy-generated.json
+    # - name: update-status
+    #   image: castlemilk/kustomize
+    #   command: ['/bin/bash']
+    #   args:
+    #     - '-c'
+    #     - |
+    #       ls -la /workspace/pull-request/
+    #       ls -la /workspace/output/pull-request
+    #       echo '{"State":"StatePending","Label":"generated-config","Desc":"generated-configuration","Target":""}' > /workspace/pull-request/status/policy-generated.json
+          
 ---
 apiVersion: tekton.dev/v1alpha1
 kind: Task
@@ -190,12 +233,12 @@ spec:
     #     - |
     #       kubectl create service loadbalancer test --tcp=8080 -n default
     - name: anchorctl-integration-test
-      image: castlemilk/kind
-      command: ['kubectl']
+      image: castlemilk/anchorctl:latest
+      command: [ '/home/anchorctl' ]
       args:
-        - 'get'
-        - 'pods'
-        - '--all-namespaces'
+        - 'test'
+        - '-f'
+        - '/workspace/source-repo/examples/test-admission-controller/test/anchor_test_ci.yaml'
     - name: delete-cluster
       image: castlemilk/kind
       args:
