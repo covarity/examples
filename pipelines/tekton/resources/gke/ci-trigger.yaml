@@ -9,9 +9,11 @@ spec:
       description: The git revision
       default: master
     - name: branch
-      description: branch name corresponding to trigger event
-    - name: pullRequestUrl
-      description: pr url for the given triggered event
+      description: branch name corresponding to trigger events
+    - name: statuses_url
+      description: url to update status for given PR
+    # - name: pullRequestUrl
+    #   description: pr url for the given triggered event
     - name: gitrepositoryurl
       description: The git repository url
     - name: namespace
@@ -29,20 +31,20 @@ spec:
           value: $(params.gitrevision)
         - name: url
           value: $(params.gitrepositoryurl)
-    - apiVersion: tekton.dev/v1alpha1
-      kind: PipelineResource
-      metadata:
-        name: pull-request-$(uid)
-        namespace: $(params.namespace)
-      spec:
-        type: pullRequest
-        params:
-        - name: url
-          value: $(params.gitrepositoryurl)
-        secrets:
-        - fieldName: authToken
-          secretName: github-secrets
-          secretKey: token
+    # - apiVersion: tekton.dev/v1alpha1
+    #   kind: PipelineResource
+    #   metadata:
+    #     name: pull-request-$(uid)
+    #     namespace: $(params.namespace)
+    #   spec:
+    #     type: pullRequest
+    #     params:
+    #     - name: url
+    #       value: $(params.pullRequestUrl)
+    #     secrets:
+    #     - fieldName: authToken
+    #       secretName: github-secrets
+    #       secretKey: token
     - apiVersion: tekton.dev/v1alpha1
       kind: PipelineResource
       metadata:
@@ -62,13 +64,18 @@ spec:
         params:
           - name: branch
             value: $(params.branch)
-        serviceAccount: tekton-triggers-admin
+          - name: statuses_url
+            value: $(params.statuses_url)
+        serviceAccountName: tekton-triggers-admin
         pipelineRef:
           name: opa-policy-pipeline
         resources:
           - name: source-repo
             resourceRef:
               name: source-repo-$(uid)
+          # - name: pull-request
+          #   resourceRef:
+          #     name: pull-request-$(uid)
           - name: event-to-sink
             resourceRef:
               name: event-to-sink-$(uid)
@@ -82,8 +89,10 @@ spec:
   params:
     - name: gitrevision
       value: $(body.pull_request.head.sha)
-    - name: pullRequestUrl 
-      value: $(body.pull_request.url)
+    # - name: pullRequestUrl 
+    #   value: $(body.pull_request.html_url)
+    - name: statuses_url
+      value: $(body.pull_request.statuses_url)
     - name: namespace
       value: opa-demo
     - name: branch
