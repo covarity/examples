@@ -35,12 +35,12 @@ test.unit: generate.policies
 generate.manifests:
 	@rm -rf ${KUBE_DIR}/kustomization.yaml; touch ${KUBE_DIR}/kustomization.yaml;
 	@mkdir -p ${MANIFEST_DIR}
-	cd ${KUBE_DIR}; for file in $(shell find ${KUBE_DIR}/policies -type f -name '*-main.rego'); do \
+	@cd ${KUBE_DIR}; for file in $(shell find ${KUBE_DIR}/policies -type f -name '*-main.rego'); do \
 	 	kustomize edit add configmap $$(basename $$file .rego) --from-file ./policies/$$(basename $$file); \
 	done;
 	cd ${KUBE_DIR}; kustomize edit set namespace opa; kustomize edit add label openpolicyagent.org/policy:rego
 	@echo -e 'generatorOptions:\n  disableNameSuffixHash: true' >> ${KUBE_DIR}/kustomization.yaml
-	cd ${KUBE_DIR}; kustomize build . > ./manifests/${POLICY_VERSION}/output.yaml;
+	@cd ${KUBE_DIR}; kustomize build . > ./manifests/${POLICY_VERSION}/output.yaml;
 
 ## Deploy OPA + kube-mgmt into the cluster eg. make deploy.prereqs CLUSTER=ci
 deploy.prereqs:

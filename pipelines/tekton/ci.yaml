@@ -35,18 +35,21 @@ spec:
         outputs:
           - name: event-to-sink
             resource: event-to-sink
-    # - name: opa-policy-integration-tests
-    #   runAfter:
-    #   - opa-policy-unit-tests
-    #   taskRef:
-    #     name: opa-policy-integration-tests
-    #   resources:
-    #     inputs:
-    #       - name: workspace
-    #         resource: source-repo
-    #     outputs:
-    #       - name: event-to-sink
-    #         resource: event-to-sink
+    - name: opa-policy-integration-tests
+      runAfter:
+      - opa-policy-unit-tests
+      taskRef:
+        name: opa-policy-integration-tests
+      resources:
+        inputs:
+          - name: source-repo
+            resource: source-repo
+          - name: workspace
+            resource: source-repo
+            from: [opa-policy-generate]
+        outputs:
+          - name: event-to-sink
+            resource: event-to-sink
 ---
 apiVersion: tekton.dev/v1alpha1
 kind: Task
@@ -71,10 +74,6 @@ spec:
       args:
         - '-c'
         - |
-          echo $(inputs.resources.workspace.revision)
-          ls -la workspace/
-          ls -la /workspace
-          echo $PWD
           cd workspace/examples/test-admission-controller 
           make generate.policies CLUSTER=ci KUBE_DIR=/workspace/output/workspace
     - name: generate-manifests
@@ -85,6 +84,7 @@ spec:
         - |
           cd workspace/examples/test-admission-controller 
           make generate.manifests CLUSTER=ci KUBE_DIR=/workspace/output/workspace
+          tree /workspace/output/workspace 
 ---
 apiVersion: tekton.dev/v1alpha1
 kind: Task
@@ -120,13 +120,24 @@ metadata:
 spec:
   inputs:
     resources:
+      - name: source-repo
+        type: git
       - name: workspace
         type: git
+        targetPath: generated
   outputs:
     resources:
     - name: event-to-sink
       type: cloudEvent
   steps:
+    - name: test
+      image: castlemilk/kind
+      command: ['/bin/bash']
+      args:
+        - '-c'
+        - |
+          ls -la /workspace/source-repo
+          ls -la /workspace/generated
     - name: start-cluster
       image: castlemilk/kind
       command: ['/bin/bash']
@@ -134,17 +145,44 @@ spec:
       - '-c'
       - |
         kind create cluster
+        docker pull openpolicyagent/opa:0.13.4
+        docker pull openpolicyagent/kube-mgmt:0.9
         kind load docker-image openpolicyagent/opa:0.13.4
         kind load docker-image openpolicyagent/kube-mgmt:0.9
       volumeMounts:
         - mountPath: /var/run/
           name: dind-socket
+    
+    - name: deploy-opa
+      image: castlemilk/kind
+      command: ['/bin/bash']
+      args:
+        - '-c'
+        - |
+          kubectl create namespace opa
+          kubectl apply -f /workspace/source-repo/examples/test-admission-controller/prerequisites
+          kubectl wait -n opa --for=condition=available --timeout=600s deployment/opa
+    - name: apply-opa-policy
+      image: castlemilk/kind
+      command: ['kubectl']
+      args:
+        - 'apply'
+        - '-f'
+        - '/workspace/generated/manifests/0.1.0'
+    - name: validate-lb
+      image: castlemilk/kind
+      command: ['/bin/bash']
+      args:
+        - '-c'
+        - |
+          kubectl create service loadbalancer test --tcp=8080 -n default
     - name: anchorctl-integration-test
       image: castlemilk/kind
       command: ['kubectl']
       args:
         - 'get'
-        - 'nodes'
+        - 'pods'
+        - '--all-namespaces'
     - name: delete-cluster
       image: castlemilk/kind
       args:
