@@ -15,11 +15,13 @@ spec:
         name: opa-policy-generate
       resources:
         inputs:
-          - name: source-repo
+          - name: workspace
             resource: source-repo
         outputs:
           - name: event-to-sink
             resource: event-to-sink
+          - name: workspace
+            resource: source-repo
     - name: opa-policy-unit-tests
       runAfter:
       - opa-policy-generate
@@ -27,48 +29,62 @@ spec:
         name: opa-policy-unit-tests
       resources:
         inputs:
-          - name: source-repo
+          - name: workspace
             resource: source-repo
+            from: [opa-policy-generate]
         outputs:
           - name: event-to-sink
             resource: event-to-sink
-    - name: opa-policy-integration-tests
-      runAfter:
-      - opa-policy-unit-tests
-      taskRef:
-        name: opa-policy-integration-tests
-      resources:
-        inputs:
-          - name: source-repo
-            resource: source-repo
-        outputs:
-          - name: event-to-sink
-            resource: event-to-sink
+    # - name: opa-policy-integration-tests
+    #   runAfter:
+    #   - opa-policy-unit-tests
+    #   taskRef:
+    #     name: opa-policy-integration-tests
+    #   resources:
+    #     inputs:
+    #       - name: workspace
+    #         resource: source-repo
+    #     outputs:
+    #       - name: event-to-sink
+    #         resource: event-to-sink
 ---
-  apiVersion: tekton.dev/v1alpha1
-  kind: Task
-  metadata:
-    name: opa-policy-generate
-    namespace: opa-demo
-  spec:
-    inputs:
-      resources:
-        - name: source-repo
-          type: git
-    outputs:
-      resources:
-      - name: event-to-sink
-        type: cloudEvent
-    steps:
-      - name: generate-policy
-        image: castlemilk/jinja2
-        command: ['/bin/bash']
-        args:
-          - '-c'
-          - |
-            ls -la source-repo/
-            cd source-repo/examples/test-admission-controller
-            make generate.policies CLUSTER=ci
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: opa-policy-generate
+  namespace: opa-demo
+spec:
+  inputs:
+    resources:
+      - name: workspace
+        type: git
+  outputs:
+    resources:
+    - name: event-to-sink
+      type: cloudEvent
+    - name: workspace
+      type: git
+  steps:
+    - name: generate-policy
+      image: castlemilk/jinja2
+      command: ['/bin/bash']
+      args:
+        - '-c'
+        - |
+          echo $(inputs.resources.workspace.revision)
+          ls -la workspace/
+          ls -la /workspace
+          echo $PWD
+          cd workspace/examples/test-admission-controller 
+          make generate.policies CLUSTER=ci KUBE_DIR=/workspace/output/workspace
+    - name: generate-manifests
+      image: castlemilk/kustomize
+      command: ['/bin/bash']
+      args:
+        - '-c'
+        - |
+          cd workspace/examples/test-admission-controller 
+          make generate.manifests CLUSTER=ci KUBE_DIR=/workspace/output/workspace
 ---
 apiVersion: tekton.dev/v1alpha1
 kind: Task
@@ -78,19 +94,23 @@ metadata:
 spec:
   inputs:
     resources:
-      - name: source-repo
+      - name: workspace
         type: git
+        targetPath: generated
   outputs:
     resources:
     - name: event-to-sink
       type: cloudEvent
   steps:
     - name: test
-      image: ubuntu
-      command: ['/bin/bash']
+      image: castlemilk/opa
       args:
-        - '-c'
-        - 'echo $(inputs.resources.source-repo.revision)'
+        - test
+        - /workspace/generated/policies
+        - '-v'
+        - '-l'
+        - '--explain'
+        - 'full'
 ---
 apiVersion: tekton.dev/v1alpha1
 kind: Task
@@ -100,7 +120,7 @@ metadata:
 spec:
   inputs:
     resources:
-      - name: source-repo
+      - name: workspace
         type: git
   outputs:
     resources:
@@ -109,9 +129,13 @@ spec:
   steps:
     - name: start-cluster
       image: castlemilk/kind
+      command: ['/bin/bash']
       args:
-        - 'create'
-        - 'cluster'
+      - '-c'
+      - |
+        kind create cluster
+        kind load docker-image openpolicyagent/opa:0.13.4
+        kind load docker-image openpolicyagent/kube-mgmt:0.9
       volumeMounts:
         - mountPath: /var/run/
           name: dind-socket

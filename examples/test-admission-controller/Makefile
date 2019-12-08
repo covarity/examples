@@ -32,7 +32,7 @@ test.unit: generate.policies
 	@cd resources/${CLUSTER}/policies; opa test . -v -l --explain full;
 
 ## Generate kube configmaps from OPA policies that end with -main.rego eg. make generate.manifests CLUSTER=ci
-generate.manifests: test.unit
+generate.manifests:
 	@rm -rf ${KUBE_DIR}/kustomization.yaml; touch ${KUBE_DIR}/kustomization.yaml;
 	@mkdir -p ${MANIFEST_DIR}
 	@cd ${KUBE_DIR}; for file in $(shell find ${KUBE_DIR}/policies -type f -name '*-main.rego'); do \
