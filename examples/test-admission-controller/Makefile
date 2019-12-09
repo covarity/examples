@@ -24,6 +24,7 @@ generate.policies: $(POLICIES)
 	@mkdir -p ${KUBE_DIR}/policies;
 	@for file in $^ ; do \
 		jinja2 $${file} values/${CLUSTER}.yaml --outfile ${KUBE_DIR}/policies/$$(basename $$file .j2).rego; \
+		echo " ✅  generated policy ${KUBE_DIR}/policies/$$(basename $$file .j2).rego"; \
 	done
 
 ## Test generated OPA policies eg. make test.unit CLUSTER=ci
@@ -31,15 +32,16 @@ test.unit: generate.policies
 	@cd resources/${CLUSTER}/policies; opa test . -v -l --explain full;
 
 ## Generate kube configmaps from OPA policies that end with -main.rego eg. make generate.manifests CLUSTER=ci
-generate.manifests: test.unit
+generate.manifests:
 	@rm -rf ${KUBE_DIR}/kustomization.yaml; touch ${KUBE_DIR}/kustomization.yaml;
 	@mkdir -p ${MANIFEST_DIR}
 	@cd ${KUBE_DIR}; for file in $(shell find ${KUBE_DIR}/policies -type f -name '*-main.rego'); do \
 	 	kustomize edit add configmap $$(basename $$file .rego) --from-file ./policies/$$(basename $$file); \
 	done;
-	@cd ${KUBE_DIR}; kustomize edit set namespace opa; kustomize edit add label openpolicyagent.org/policy:rego
-	@echo "generatorOptions:\n  disableNameSuffixHash: true" >> ${KUBE_DIR}/kustomization.yaml
+	cd ${KUBE_DIR}; kustomize edit set namespace opa; kustomize edit add label openpolicyagent.org/policy:rego
+	@echo -e 'generatorOptions:\n  disableNameSuffixHash: true' >> ${KUBE_DIR}/kustomization.yaml
 	@cd ${KUBE_DIR}; kustomize build . > ./manifests/${POLICY_VERSION}/output.yaml;
+	@cd ${KUBE_DIR}; kustomize build . > ./manifests/latest/output.yaml;
 
 ## Deploy OPA + kube-mgmt into the cluster eg. make deploy.prereqs CLUSTER=ci
 deploy.prereqs:

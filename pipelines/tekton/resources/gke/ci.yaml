@@ -1,0 +1,277 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: opa-policy-pipeline
+  namespace: opa-demo
+spec:
+  resources:
+    - name: source-repo
+      type: git
+    # - name: pull-request
+    #   type: pullRequest
+    - name: event-to-sink
+      type: cloudEvent
+  params:
+    - name: branch
+      type: string
+      description: branch name corresponding to pipeline trigger
+    - name: statuses_url
+      type: string
+      description: github url for updating status for PR sha
+  tasks:
+    - name: opa-policy-generate
+      taskRef:
+        name: opa-policy-generate
+      params:
+        - name: branch
+          value: $(params.branch)
+        - name: statuses_url
+          value: $(params.statuses_url)
+      resources:
+        inputs:
+          - name: workspace
+            resource: source-repo
+          # - name: pull-request
+          #   resource: pull-request
+        outputs:
+          - name: event-to-sink
+            resource: event-to-sink
+          - name: workspace
+            resource: source-repo
+          # - name: pull-request
+          #   resource: pull-request
+    - name: opa-policy-unit-tests
+      runAfter:
+      - opa-policy-generate
+      taskRef:
+        name: opa-policy-unit-tests
+      resources:
+        inputs:
+          - name: workspace
+            resource: source-repo
+            from: [opa-policy-generate]
+        outputs:
+          - name: event-to-sink
+            resource: event-to-sink
+    - name: opa-policy-integration-tests
+      runAfter:
+      - opa-policy-unit-tests
+      taskRef:
+        name: opa-policy-integration-tests
+      resources:
+        inputs:
+          - name: source-repo
+            resource: source-repo
+          - name: workspace
+            resource: source-repo
+            from: [opa-policy-generate]
+        outputs:
+          - name: event-to-sink
+            resource: event-to-sink
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: opa-policy-generate
+  namespace: opa-demo
+spec:
+  inputs:
+    params:
+    - name: branch
+      type: string
+      default: master
+    - name: statuses_url
+      type: string
+    resources:
+      - name: workspace
+        type: git
+      # - name: pull-request
+      #   type: pullRequest
+  outputs:
+    resources:
+    - name: event-to-sink
+      type: cloudEvent
+    - name: workspace
+      type: git
+    # - name: pull-request
+    #   type: pullRequest
+  steps:
+    - name: generate-policy
+      image: castlemilk/jinja2
+      command: ['/bin/bash']
+      args:
+        - '-c'
+        - |
+          echo "branch_name=$(inputs.params.branch)"
+          echo "revision=$(inputs.resources.workspace.revision)"
+          cd workspace/examples/test-admission-controller 
+          make generate.policies CLUSTER=ci KUBE_DIR=/workspace/output/workspace
+    - name: generate-manifests
+      image: castlemilk/kustomize
+      command: ['/bin/bash']
+      args:
+        - '-c'
+        - |
+          cd workspace/examples/test-admission-controller 
+          make generate.manifests CLUSTER=ci KUBE_DIR=/workspace/output/workspace
+          tree /workspace/output/workspace
+    - name: update-status-success
+      image: castlemilk/curl
+      env:
+        - name: GITHUB_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-secrets 
+              key: token
+      command:
+      - /bin/bash
+      args:
+      - '-c'
+      - |
+        echo '{"state":"pending","context":"generated-config","description":"generated-configuration","target_url":""}' > policy-generated.json
+        curl -vvvv $(inputs.params.statuses_url)?access_token=${GITHUB_ACCESS_TOKEN} \
+          -d @policy-generated.json
+    # - name: update-status
+    #   image: castlemilk/kustomize
+    #   command: ['/bin/bash']
+    #   args:
+    #     - '-c'
+    #     - |
+    #       ls -la /workspace/pull-request/
+    #       ls -la /workspace/output/pull-request
+    #       echo '{"State":"StatePending","Label":"generated-config","Desc":"generated-configuration","Target":""}' > /workspace/pull-request/status/policy-generated.json
+          
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: opa-policy-unit-tests
+  namespace: opa-demo
+spec:
+  inputs:
+    resources:
+      - name: workspace
+        type: git
+        targetPath: generated
+  outputs:
+    resources:
+    - name: event-to-sink
+      type: cloudEvent
+  steps:
+    - name: opa-unit-test
+      image: castlemilk/opa
+      args:
+        - test
+        - /workspace/generated/policies
+        - '-v'
+        - '-l'
+        - '--explain'
+        - 'full'
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: opa-policy-integration-tests
+  namespace: opa-demo
+spec:
+  inputs:
+    resources:
+      - name: source-repo
+        type: git
+      - name: workspace
+        type: git
+        targetPath: generated
+  outputs:
+    resources:
+    - name: event-to-sink
+      type: cloudEvent
+  steps:
+    # - name: test
+    #   image: castlemilk/kind
+    #   command: ['/bin/bash']
+    #   args:
+    #     - '-c'
+    #     - |
+    #       ls -la /workspace/source-repo
+    #       ls -la /workspace/generated
+    - name: start-cluster
+      image: castlemilk/kind
+      command: ['/bin/bash']
+      args:
+      - '-c'
+      - |
+        kind create cluster
+        docker pull openpolicyagent/opa:0.13.4
+        docker pull openpolicyagent/kube-mgmt:0.9
+        kind load docker-image openpolicyagent/opa:0.13.4
+        kind load docker-image openpolicyagent/kube-mgmt:0.9
+      volumeMounts:
+        - mountPath: /var/run/
+          name: dind-socket
+    
+    - name: deploy-opa
+      image: castlemilk/kind
+      command: ['/bin/bash']
+      args:
+        - '-c'
+        - |
+          kubectl create namespace opa
+          kubectl apply -f /workspace/source-repo/examples/test-admission-controller/prerequisites
+          kubectl wait -n opa --for=condition=available --timeout=600s deployment/opa
+    - name: apply-opa-policy
+      image: castlemilk/kind
+      command: ['kubectl']
+      args:
+        - 'apply'
+        - '-f'
+        - '/workspace/generated/manifests/0.1.0'
+    # - name: validate-lb
+    #   image: castlemilk/kind
+    #   command: ['/bin/bash']
+    #   args:
+    #     - '-c'
+    #     - |
+    #       kubectl create service loadbalancer test --tcp=8080 -n default
+    - name: anchorctl-integration-test
+      image: castlemilk/anchorctl:latest
+      command: [ '/home/anchorctl' ]
+      args:
+        - 'test'
+        - '-f'
+        - '/workspace/source-repo/examples/test-admission-controller/test/anchor_test_ci.yaml'
+    - name: delete-cluster
+      image: castlemilk/kind
+      args:
+        - 'delete'
+        - 'cluster'
+      volumeMounts:
+        - mountPath: /var/run/
+          name: dind-socket
+  sidecars:
+    - image: docker:18.05-dind
+      name: server
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - mountPath: /var/lib/docker
+          name: dind-storage
+        - mountPath: /var/run/
+          name: dind-socket
+        - mountPath: /lib/modules
+          name: modules
+          readOnly: true
+        - mountPath: /sys/fs/cgroup
+          name: cgroup
+  volumes:
+    - name: dind-storage
+      emptyDir: {}
+    - name: dind-socket
+      emptyDir: {}
+    - name: modules
+      hostPath:
+        path: /lib/modules
+        type: Directory
+    - name: cgroup
+      hostPath:
+        path: /sys/fs/cgroup
+        type: Directory

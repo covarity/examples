@@ -1,0 +1,2 @@
+CLUSTER=gke
+NAMESPACE=opa-demo
