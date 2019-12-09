@@ -27,7 +27,7 @@ spec:
           labelValue: rego
   - type: AssertValidation
     spec:
-      expectedError: "External Loadbalancers cannot be deployed in this cluster"
+      containsResponse: "External Loadbalancers cannot be deployed in this cluster"
     resource:
       manifest:
         path: "./fixtures/loadbalancer.yaml"
