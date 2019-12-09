@@ -34,8 +34,8 @@ spec:
         action: CREATE
   - type: AssertMutation
     spec:
-      jsonPath: ".metadata.labels.function"
-      value: "workload"
+      jsonPath: ".metadata.labels.billing-information"
+      value: "ACC108964"
     resource:
       manifest:
         path: "./fixtures/deploy.yaml"
