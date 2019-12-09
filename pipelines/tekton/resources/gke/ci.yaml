@@ -236,13 +236,13 @@ spec:
           ls -la /workspace/source-repo/examples/test-admission-controller/test/fixture
           sleep 20
           kubectl get configmaps -n opa -o yaml
-    - name: validate-lb
-      image: castlemilk/kind
-      command: ['/bin/bash']
-      args:
-        - '-c'
-        - |
-          kubectl create service loadbalancer test --tcp=8080 -n default
+    # - name: validate-lb
+    #   image: castlemilk/kind
+    #   command: ['/bin/bash']
+    #   args:
+    #     - '-c'
+    #     - |
+    #       kubectl create service loadbalancer test --tcp=8080 -n default
     - name: anchorctl-integration-test
       image: castlemilk/anchorctl:latest
       command: [ '/home/anchorctl' ]
