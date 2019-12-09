@@ -27,7 +27,7 @@ spec:
           labelValue: rego
   - type: AssertValidation
     spec:
-      expectedError: "Internal error occurred: admission webhook \"webhook.openpolicyagent.org\" denied the request: External Loadbalancers cannot be deployed in this cluster"
+      expectedError: "External Loadbalancers cannot be deployed in this cluster"
     resource:
       manifest:
         path: "./fixtures/loadbalancer.yaml"
