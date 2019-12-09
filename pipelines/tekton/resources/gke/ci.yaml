@@ -225,20 +225,24 @@ spec:
         - 'apply'
         - '-f'
         - '/workspace/generated/manifests/0.1.0'
-    # - name: validate-lb
-    #   image: castlemilk/kind
-    #   command: ['/bin/bash']
-    #   args:
-    #     - '-c'
-    #     - |
-    #       kubectl create service loadbalancer test --tcp=8080 -n default
+   
     - name: check
       image: castlemilk/kind
       command: ['/bin/bash']
       args:
         - '-c'
         - |
-          ls -la /workspace/source-repo/examples/test-admission-controller/test/ 
+          ls -la /workspace/source-repo/examples/test-admission-controller/test/
+          ls -la /workspace/source-repo/examples/test-admission-controller/test/fixture
+          sleep 20
+          kubectl get configmaps -n opa -o yaml
+    - name: validate-lb
+      image: castlemilk/kind
+      command: ['/bin/bash']
+      args:
+        - '-c'
+        - |
+          kubectl create service loadbalancer test --tcp=8080 -n default
     - name: anchorctl-integration-test
       image: castlemilk/anchorctl:latest
       command: [ '/home/anchorctl' ]
@@ -246,6 +250,8 @@ spec:
         - 'test'
         - '-f'
         - '/workspace/source-repo/examples/test-admission-controller/test/anchor_test_ci.yaml'
+        - '-k'
+        - 'kubetest'
     - name: delete-cluster
       image: castlemilk/kind
       args:
