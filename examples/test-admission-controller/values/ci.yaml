@@ -11,6 +11,6 @@ lb_services:
   - ingress
 
 mutate_label:
-- namespace: something
-  label_key: something.is
-  label_value: labels
+- namespace: applications
+  label_key: billing-information
+  label_value: ACC108964

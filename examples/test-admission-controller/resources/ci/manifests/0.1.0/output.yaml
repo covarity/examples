@@ -129,9 +129,9 @@ data:
     `isCreateOrUpdate`\n############################################################\n\nmutateLabelResourceList
     = [\"deployments\", \"jobs\", \"cronjobs\", \"replicasets\"]\n\npatch [patchCode]
     {\n    isValidRequest\n\tisCreateOrUpdate\n\tinput.request.resource.resource =
-    mutateLabelResourceList[_]\n    input.request.namespace = \"something\"\n    patchCode
-    = { \"op\": \"add\", \"path\": \"/metadata/labels/something.is\", \"value\": \"labels\"
-    }\n\n}\n\n"
+    mutateLabelResourceList[_]\n    input.request.namespace = \"applications\"\n    patchCode
+    = { \"op\": \"add\", \"path\": \"/metadata/labels/billing-information\", \"value\":
+    \"ACC108964\" }\n\n}\n\n"
 kind: ConfigMap
 metadata:
   labels:
