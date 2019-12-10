@@ -23,8 +23,8 @@ spec:
         spec:
           kind: ConfigMap
           namespace: opa
-          labelKey: openpolicyagent.org/policy
-          labelValue: rego
+          labels:
+            openpolicyagent.org/policy: rego
   - type: AssertValidation
     spec:
       containsResponse: "External Loadbalancers cannot be deployed in this cluster"
