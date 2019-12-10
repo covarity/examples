@@ -95,6 +95,7 @@ spec:
       type: git
     # - name: pull-request
     #   type: pullRequest
+    #   targetPath: /workspace/pull-request
   steps:
     - name: generate-policy
       image: castlemilk/jinja2
@@ -137,8 +138,7 @@ spec:
     #   args:
     #     - '-c'
     #     - |
-    #       ls -la /workspace/pull-request/
-    #       ls -la /workspace/output/pull-request
+
     #       echo '{"State":"StatePending","Label":"generated-config","Desc":"generated-configuration","Target":""}' > /workspace/pull-request/status/policy-generated.json
           
 ---
