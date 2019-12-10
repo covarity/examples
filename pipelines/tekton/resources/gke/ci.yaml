@@ -245,7 +245,6 @@ spec:
     #       kubectl create service loadbalancer test --tcp=8080 -n default
     - name: anchorctl-integration-test
       image: castlemilk/anchorctl:latest
-      command: [ '/home/anchorctl' ]
       args:
         - 'test'
         - '-f'
