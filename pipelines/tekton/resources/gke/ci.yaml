@@ -265,7 +265,6 @@ spec:
           kubectl create namespace opa
           kubectl apply -f /workspace/source-repo/examples/test-admission-controller/prerequisites
           kubectl wait -n opa --for=condition=available --timeout=600s deployment/opa
-          cat /workspace/generated/manifests/0.1.0/* 
     - name: apply-opa-policy
       image: castlemilk/kind
       command: ['kubectl']
@@ -282,7 +281,7 @@ spec:
         - |
           ls -la /workspace/source-repo/examples/test-admission-controller/test/
           ls -la /workspace/source-repo/examples/test-admission-controller/test/fixture
-          sleep 20
+          sleep 10 
           kubectl get configmaps -n opa -o yaml
     - name: anchorctl-integration-test
       image: castlemilk/anchorctl:latest
