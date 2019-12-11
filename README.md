@@ -1,12 +1,12 @@
-# Truss Examples
+# Covarity Examples
 
-This repository aims to capture a number of examples which demonstrate different solutions and mechanisms which incorporate the truss tool set into continuous integration and delivery of code.
+This repository aims to capture a number of examples which demonstrate different solutions and mechanisms which incorporate the Covarity tool set into continuous integration and delivery of code.
 
 ## Examples
 
 ### Test Admission Control
 
-An example where `anchorctl` is used to test the Admission Control functionality of Kubernetes. The example focuses on templating policies, unit testing and integration testing OPA. It was developed as part of the Kube-Forum Sydney 2019 talk which can be found [here](https://github.com/trussio/truss-demos/tree/master/kube-forum-2019).
+An example where `anchorctl` is used to test the Admission Control functionality of Kubernetes. The example focuses on templating policies, unit testing and integration testing OPA with `anchorctl`. It was developed as part of the Kube-Forum Sydney 2019 talk which can be found [here](https://github.com/trussio/truss-demos/tree/master/kube-forum-2019).
 
 The following technologies are used:
 - **Rego** to write the policies
