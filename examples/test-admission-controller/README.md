@@ -35,16 +35,16 @@ To deploy a version of these policies to your cluster:
 ### Make Entries
 
 ```bash
-generate.policies   Generate OPA policies into resources/${CLUSTER}/policies eg. make generate.policies CLUSTER=ci
-generate.manifests  Generate kube configmaps from OPA policies that end with -main.rego eg. make generate.manifests CLUSTER=ci
-deploy.prereqs      Deploy OPA + kube-mgmt into the cluster eg. make deploy.prereqs CLUSTER=ci
-deploy              Deploy the OPA policy configmaps in the cluster eg. make deploy CLUSTER=ci
-test.unit           Test generated OPA policies eg. make test.unit CLUSTER=ci
-test.coverage       Test coverage of OPA policies eg. make test.coverage CLUSTER=ci
-test.integration    Integration test OPA policies with anchorctl eg. make test.integration CLUSTER=ci
-clean               Delete auto-generated files under resouces/${CLUSTER} eg. make clean CLUSTER=ci
-status              Status of OPA configmaps. eg. make status CLUSTER=ci
-help                List the Makefile Entries and a short description
+generate.policies    Generate OPA policies into resources/${CLUSTER}/policies eg. make generate.policies CLUSTER=ci
+generate.manifests   Generate kube configmaps from OPA policies that end with -main.rego eg. make generate.manifests CLUSTER=ci
+deploy.prereqs       Deploy OPA + kube-mgmt into the cluster eg. make deploy.prereqs CLUSTER=ci
+deploy               Deploy the OPA policy configmaps in the cluster eg. make deploy CLUSTER=ci
+test.unit            Test generated OPA policies eg. make test.unit CLUSTER=ci
+test.coverage        Test coverage of OPA policies eg. make test.coverage CLUSTER=ci
+test.integration     Integration test OPA policies with anchorctl eg. make test.integration CLUSTER=ci
+clean                Delete auto-generated files under resouces/${CLUSTER} eg. make clean CLUSTER=ci
+status               Status of OPA configmaps. eg. make status CLUSTER=ci
+help                 List the Makefile Entries and a short description
 ```
 
 ## Directory Structure
