@@ -45,6 +45,11 @@ spec:
       - opa-policy-generate
       taskRef:
         name: opa-policy-unit-tests
+      params:
+        - name: branch
+          value: $(params.branch)
+        - name: statuses_url
+          value: $(params.statuses_url)
       resources:
         inputs:
           - name: workspace
@@ -56,6 +61,11 @@ spec:
     - name: opa-policy-integration-tests
       runAfter:
       - opa-policy-unit-tests
+      params:
+        - name: branch
+          value: $(params.branch)
+        - name: statuses_url
+          value: $(params.statuses_url)
       taskRef:
         name: opa-policy-integration-tests
       resources:
@@ -99,6 +109,12 @@ spec:
   steps:
     - name: update-status-pending
       image: castlemilk/curl
+      env:
+        - name: GITHUB_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-secrets 
+              key: token
       command:
       - /bin/bash
       args:
@@ -127,12 +143,12 @@ spec:
           tree /workspace/output/workspace
     - name: update-status-success
       image: castlemilk/curl
-      # env:
-      #   - name: GITHUB_ACCESS_TOKEN
-      #     valueFrom:
-      #       secretKeyRef:
-      #         name: github-secrets 
-      #         key: token
+      env:
+        - name: GITHUB_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-secrets 
+              key: token
       command:
       - /bin/bash
       args:
@@ -157,6 +173,12 @@ metadata:
   namespace: opa-demo
 spec:
   inputs:
+    params:
+      - name: branch
+        type: string
+        default: master
+      - name: statuses_url
+        type: string
     resources:
       - name: workspace
         type: git
@@ -166,6 +188,21 @@ spec:
     - name: event-to-sink
       type: cloudEvent
   steps:
+    - name: update-status-pending
+      image: castlemilk/curl
+      env:
+        - name: GITHUB_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-secrets 
+              key: token
+      command:
+      - /bin/bash
+      args:
+      - '-c'
+      - |
+        echo '{"state":"pending","context":"unit-tests","description":"running OPA unit tests","target_url":""}' > unit-tests-pending.json
+        curl $(inputs.params.statuses_url)?access_token=${GITHUB_ACCESS_TOKEN} -d @unit-tests-pending.json
     - name: opa-unit-test
       image: castlemilk/opa
       args:
@@ -175,6 +212,21 @@ spec:
         - '-l'
         - '--explain'
         - 'full'
+    - name: update-status-success
+      image: castlemilk/curl
+      env:
+        - name: GITHUB_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-secrets 
+              key: token
+      command:
+      - /bin/bash
+      args:
+      - '-c'
+      - |
+        echo '{"state":"success","context":"unit-tests","description":"running OPA unit tests","target_url":""}' > unit-tests-success.json
+        curl $(inputs.params.statuses_url)?access_token=${GITHUB_ACCESS_TOKEN} -d @unit-tests-success.json
 ---
 apiVersion: tekton.dev/v1alpha1
 kind: Task
@@ -183,6 +235,12 @@ metadata:
   namespace: opa-demo
 spec:
   inputs:
+    params:
+      - name: branch
+        type: string
+        default: master
+      - name: statuses_url
+        type: string
     resources:
       - name: source-repo
         type: git
@@ -194,14 +252,21 @@ spec:
     - name: event-to-sink
       type: cloudEvent
   steps:
-    # - name: test
-    #   image: castlemilk/kind
-    #   command: ['/bin/bash']
-    #   args:
-    #     - '-c'
-    #     - |
-    #       ls -la /workspace/source-repo
-    #       ls -la /workspace/generated
+    - name: update-status-pending
+      image: castlemilk/curl
+      env:
+        - name: GITHUB_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-secrets 
+              key: token
+      command:
+      - /bin/bash
+      args:
+      - '-c'
+      - |
+        echo '{"state":"pending","context":"integration-tests","description":"running anchorctl integration tests","target_url":""}' > integration-tests-pending.json
+        curl $(inputs.params.statuses_url)?access_token=${GITHUB_ACCESS_TOKEN} -d @integration-tests-pending.json
     - name: start-cluster
       image: castlemilk/kind
       command: ['/bin/bash']
@@ -252,6 +317,21 @@ spec:
         - '/workspace/source-repo/examples/test-admission-controller/test/anchor_test_ci.yaml'
         - '-k'
         - 'kubetest'
+    - name: update-status-success
+      image: castlemilk/curl
+      env:
+        - name: GITHUB_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-secrets 
+              key: token
+      command:
+      - /bin/bash
+      args:
+      - '-c'
+      - |
+        echo '{"state":"success","context":"integration-tests","description":"running anchorctl integration tests completed","target_url":""}' > integration-tests-success.json
+        curl $(inputs.params.statuses_url)?access_token=${GITHUB_ACCESS_TOKEN} -d @integration-tests-success.json
     - name: delete-cluster
       image: castlemilk/kind
       args:
