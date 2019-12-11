@@ -97,6 +97,15 @@ spec:
     #   type: pullRequest
     #   targetPath: /workspace/pull-request
   steps:
+    - name: update-status-pending
+      image: castlemilk/curl
+      command:
+      - /bin/bash
+      args:
+      - '-c'
+      - |
+        echo '{"state":"pending","context":"generate-config","description":"generating rego policy and configmaps","target_url":""}' > policy-generate-pending.json
+        curl $(inputs.params.statuses_url)?access_token=${GITHUB_ACCESS_TOKEN} -d @policy-generate-pending.json
     - name: generate-policy
       image: castlemilk/jinja2
       command: ['/bin/bash']
@@ -118,20 +127,19 @@ spec:
           tree /workspace/output/workspace
     - name: update-status-success
       image: castlemilk/curl
-      env:
-        - name: GITHUB_ACCESS_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: github-secrets 
-              key: token
+      # env:
+      #   - name: GITHUB_ACCESS_TOKEN
+      #     valueFrom:
+      #       secretKeyRef:
+      #         name: github-secrets 
+      #         key: token
       command:
       - /bin/bash
       args:
       - '-c'
       - |
-        echo '{"state":"pending","context":"generated-config","description":"generated-configuration","target_url":""}' > policy-generated.json
-        curl -vvvv $(inputs.params.statuses_url)?access_token=${GITHUB_ACCESS_TOKEN} \
-          -d @policy-generated.json
+        echo '{"state":"success","context":"generate-config","description":"generating rego policy and configmaps","target_url":""}' > policy-generate-success.json
+        curl $(inputs.params.statuses_url)?access_token=${GITHUB_ACCESS_TOKEN} -d @policy-generate-success.json
     # - name: update-status
     #   image: castlemilk/kustomize
     #   command: ['/bin/bash']
@@ -236,13 +244,6 @@ spec:
           ls -la /workspace/source-repo/examples/test-admission-controller/test/fixture
           sleep 20
           kubectl get configmaps -n opa -o yaml
-    # - name: validate-lb
-    #   image: castlemilk/kind
-    #   command: ['/bin/bash']
-    #   args:
-    #     - '-c'
-    #     - |
-    #       kubectl create service loadbalancer test --tcp=8080 -n default
     - name: anchorctl-integration-test
       image: castlemilk/anchorctl:latest
       args:
