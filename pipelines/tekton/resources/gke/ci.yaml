@@ -99,6 +99,12 @@ spec:
   steps:
     - name: update-status-pending
       image: castlemilk/curl
+      env:
+        - name: GITHUB_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-secrets 
+              key: token
       command:
       - /bin/bash
       args:
@@ -127,12 +133,12 @@ spec:
           tree /workspace/output/workspace
     - name: update-status-success
       image: castlemilk/curl
-      # env:
-      #   - name: GITHUB_ACCESS_TOKEN
-      #     valueFrom:
-      #       secretKeyRef:
-      #         name: github-secrets 
-      #         key: token
+      env:
+        - name: GITHUB_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-secrets 
+              key: token
       command:
       - /bin/bash
       args:
