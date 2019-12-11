@@ -14,3 +14,6 @@ mutate_label:
 - namespace: applications
   label_key: billing-information
   label_value: ACC108964
+- namespace: demo
+  label_key: billing-information
+  label_value: DEMO-BILLING
