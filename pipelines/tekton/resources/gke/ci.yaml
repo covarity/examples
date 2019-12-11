@@ -122,6 +122,10 @@ spec:
       - |
         echo '{"state":"pending","context":"generate-config","description":"generating rego policy and configmaps","target_url":""}' > policy-generate-pending.json
         curl $(inputs.params.statuses_url)?access_token=${GITHUB_ACCESS_TOKEN} -d @policy-generate-pending.json
+        echo '{"state":"pending","context":"unit-tests","description":"running OPA unit tests","target_url":""}' > unit-tests-pending.json
+        curl $(inputs.params.statuses_url)?access_token=${GITHUB_ACCESS_TOKEN} -d @unit-tests-pending.json
+        echo '{"state":"pending","context":"integration-tests","description":"running anchorctl integration tests","target_url":""}' > integration-tests-pending.json
+        curl $(inputs.params.statuses_url)?access_token=${GITHUB_ACCESS_TOKEN} -d @integration-tests-pending.json
     - name: generate-policy
       image: castlemilk/jinja2
       command: ['/bin/bash']
@@ -188,21 +192,6 @@ spec:
     - name: event-to-sink
       type: cloudEvent
   steps:
-    - name: update-status-pending
-      image: castlemilk/curl
-      env:
-        - name: GITHUB_ACCESS_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: github-secrets 
-              key: token
-      command:
-      - /bin/bash
-      args:
-      - '-c'
-      - |
-        echo '{"state":"pending","context":"unit-tests","description":"running OPA unit tests","target_url":""}' > unit-tests-pending.json
-        curl $(inputs.params.statuses_url)?access_token=${GITHUB_ACCESS_TOKEN} -d @unit-tests-pending.json
     - name: opa-unit-test
       image: castlemilk/opa
       args:
@@ -252,21 +241,6 @@ spec:
     - name: event-to-sink
       type: cloudEvent
   steps:
-    - name: update-status-pending
-      image: castlemilk/curl
-      env:
-        - name: GITHUB_ACCESS_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: github-secrets 
-              key: token
-      command:
-      - /bin/bash
-      args:
-      - '-c'
-      - |
-        echo '{"state":"pending","context":"integration-tests","description":"running anchorctl integration tests","target_url":""}' > integration-tests-pending.json
-        curl $(inputs.params.statuses_url)?access_token=${GITHUB_ACCESS_TOKEN} -d @integration-tests-pending.json
     - name: start-cluster
       image: castlemilk/kind
       command: ['/bin/bash']
