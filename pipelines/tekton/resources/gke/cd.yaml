@@ -4,6 +4,12 @@ metadata:
   name: opa-policy-deploy-pipeline
   namespace: opa-demo
 spec:
+  params:
+    - name: branch
+      type: string
+      default: master
+    - name: statuses_url
+      type: string
   resources:
     - name: source-repo
       type: git
