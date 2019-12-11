@@ -2,18 +2,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    run: nginx-labels
+    deploy: demo
   name: nginx-labels
   namespace: demo
 spec:
   replicas: 1
   selector:
     matchLabels:
-      run: nginx-labels
+      deploy: demo
   template:
     metadata:
       labels:
-        run: nginx-labels
+        deploy: demo
     spec:
       containers:
         - image: nginx
