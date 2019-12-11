@@ -281,7 +281,7 @@ spec:
         - |
           ls -la /workspace/source-repo/examples/test-admission-controller/test/
           ls -la /workspace/source-repo/examples/test-admission-controller/test/fixture
-          sleep 20
+          sleep 10 
           kubectl get configmaps -n opa -o yaml
     - name: anchorctl-integration-test
       image: castlemilk/anchorctl:latest
