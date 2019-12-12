@@ -7,8 +7,6 @@ spec:
     postStart:
     - path: "./fixtures/applications-ns.yaml"
       action: "CREATE"
-    - path: "./fixtures/demo-ns.yaml"
-      action: "CREATE"
     preStop:
     - path: "./fixtures/deploy.yaml"
       action: "DELETE"
