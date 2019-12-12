@@ -8,9 +8,9 @@ spec:
     - path: "./fixtures/applications-ns.yaml"
       action: "CREATE"
     preStop:
-    - path: "./fixtures/deploy.yaml"
-      action: "DELETE"
     - path: "./fixtures/applications-ns.yaml"
+      action: "DELETE"
+    - path: "./fixtures/deploy.yaml"
       action: "DELETE"
   tests:
   - type: AssertJSONPath
