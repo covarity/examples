@@ -10,8 +10,6 @@ spec:
     - path: "./fixtures/demo-ns.yaml"
       action: "CREATE"
     preStop:
-    - path: "./fixtures/deploy.yaml"
-      action: "DELETE"
     - path: "./fixtures/applications-ns.yaml"
       action: "DELETE"
     - path: "./fixtures/demo-ns.yaml"
