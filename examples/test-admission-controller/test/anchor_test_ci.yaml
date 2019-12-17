@@ -7,10 +7,12 @@ spec:
     postStart:
     - path: "./fixtures/applications-ns.yaml"
       action: "CREATE"
+    - path: "./fixtures/demo-ns.yaml"
+      action: "CREATE"
     preStop:
     - path: "./fixtures/applications-ns.yaml"
       action: "DELETE"
-    - path: "./fixtures/deploy.yaml"
+    - path: "./fixtures/demo-ns.yaml"
       action: "DELETE"
   tests:
   - type: AssertJSONPath
@@ -39,4 +41,12 @@ spec:
     resource:
       manifest:
         path: "./fixtures/deploy.yaml"
+        action: CREATE
+  - type: AssertMutation
+    spec:
+      jsonPath: ".metadata.labels.billing-information"
+      value: "DEMO-BILLING"
+    resource:
+      manifest:
+        path: "./fixtures/demo-deploy.yaml"
         action: CREATE
